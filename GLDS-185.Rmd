@@ -1,0 +1,423 @@
+---
+title: "GLDS-185"
+author: "Mehwish"
+date: "6/20/2022"
+output: html_document
+---
+
+Loading required libraries for the analysis.
+```{r}
+library(Rsubread)
+library(fastqcr)
+library(seqTools)
+library(edgeR)
+library(DESeq2)
+library(ggplot2)
+library(apeglm)
+library(tidyverse)
+library(pheatmap)
+library(Glimma)
+library(ggfortify)
+library(RColorBrewer)
+library(EnhancedVolcano)
+library(annotate)
+library(biomaRt)
+library(msigdbr)
+library(enrichplot)
+library(DOSE)
+library(pathview)
+library(ReactomePA)
+library(clusterProfiler)
+library(org.Dm.eg.db)
+library(ggnewscale)
+```
+
+Setting a path to the selected data containing directory (Change it to the directory of your choice).
+```{r}
+base_dir <- "E:/Mehwish/GLDS185/raw_data/"
+```
+
+Importing raw read files one by one.
+```{r}
+S_73_1 <- list.files(path = file.path(base_dir), pattern = "GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_73_SL143632.fastq.gz", full.names = TRUE)
+S_73_2 <- list.files(path = file.path(base_dir), pattern = "GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_73_SL143632.fastq.gz", full.names = TRUE)
+S_74_1 <- list.files(path = file.path(base_dir), pattern = "GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_74_SL143633.fastq.gz", full.names = TRUE)
+S_74_2 <- list.files(path = file.path(base_dir), pattern = "GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_74_SL143633.fastq.gz", full.names = TRUE)
+S_75_1 <- list.files(path = file.path(base_dir), pattern = "GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_75_SL143634.fastq.gz", full.names = TRUE)
+S_75_2 <- list.files(path = file.path(base_dir), pattern = "GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_75_SL143634.fastq.gz", full.names = TRUE)
+S_76_1 <- list.files(path = file.path(base_dir), pattern = "GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_76_SL143635.fastq.gz", full.names = TRUE)
+S_76_2 <- list.files(path = file.path(base_dir), pattern = "GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_76_SL143635.fastq.gz", full.names = TRUE)
+S_77_1 <- list.files(path = file.path(base_dir), pattern = "GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_77_SL143636.fastq.gz", full.names = TRUE)
+S_77_2 <- list.files(path = file.path(base_dir), pattern = "GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_77_SL143636.fastq.gz", full.names = TRUE)
+S_78_1 <- list.files(path = file.path(base_dir), pattern = "GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_78_SL143637.fastq.gz", full.names = TRUE)
+S_78_2 <- list.files(path = file.path(base_dir), pattern = "GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_78_SL143637.fastq.gz", full.names = TRUE)
+```
+
+Validation of paired reads from the input data.
+```{r}
+all.equal(length(S_73_1),length(S_73_2))
+all.equal(length(S_74_1),length(S_74_2))
+all.equal(length(S_75_1),length(S_75_2))
+all.equal(length(S_76_1),length(S_76_2))
+all.equal(length(S_77_1),length(S_77_2))
+all.equal(length(S_78_1),length(S_78_2))
+```
+
+Plotting raw reads for evaluating the quality based on Phred Score. 
+```{r}
+qs1_1 <- qualityScores(filename="E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_73_SL143632.fastq.gz")
+qs1_2 <- qualityScores(filename="E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_73_SL143632.fastq.gz")
+qs2_1 <- qualityScores(filename="E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_74_SL143633.fastq.gz")
+qs2_2 <- qualityScores(filename="E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_74_SL143633.fastq.gz")
+qs3_1 <- qualityScores(filename="E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_75_SL143634.fastq.gz")
+qs3_2 <- qualityScores(filename="E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_75_SL143634.fastq.gz")
+qs4_1 <- qualityScores(filename="E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_76_SL143635.fastq.gz")
+qs4_2 <- qualityScores(filename="E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_76_SL143635.fastq.gz")
+qs5_1 <- qualityScores(filename="E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_77_SL143636.fastq.gz")
+qs5_2 <- qualityScores(filename="E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_77_SL143636.fastq.gz")
+qs6_1 <- qualityScores(filename="E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_78_SL143637.fastq.gz")
+qs6_2 <- qualityScores(filename="E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_78_SL143637.fastq.gz")
+```
+
+Plotting boxplot of the quality scores.
+```{r}
+boxplot(qs1_1, xlab = "number of bases", ylab = "Phred Score", main = "S_73_1 forward reads", outline = F, col = "blue")
+boxplot(qs1_2, xlab = "number of bases", ylab = "Phred Score", main = "S_73_2 reverse reads", outline = F, col = "red")
+boxplot(qs2_1, xlab = "number of bases", ylab = "Phred Score", main = "S_74_1 forward reads", outline = F, col = "blue")
+boxplot(qs2_2, xlab = "number of bases", ylab = "Phred Score", main = "S_74_2 reverse reads", outline = F, col = "red")
+boxplot(qs3_1, xlab = "number of bases", ylab = "Phred Score", main = "S_75_1 forward reads", outline = F, col = "blue")
+boxplot(qs3_2, xlab = "number of bases", ylab = "Phred Score", main = "S_75_2 reverse reads", outline = F, col = "red")
+boxplot(qs4_1, xlab = "number of bases", ylab = "Phred Score", main = "S_76_1 forward reads", outline = F, col = "blue")
+boxplot(qs4_2, xlab = "number of bases", ylab = "Phred Score", main = "S_76_2 reverse reads", outline = F, col = "red")
+boxplot(qs5_1, xlab = "number of bases", ylab = "Phred Score", main = "S_77_1 forward reads", outline = F, col = "blue")
+boxplot(qs5_2, xlab = "number of bases", ylab = "Phred Score", main = "S_77_2 reverse reads", outline = F, col = "red")
+boxplot(qs6_1, xlab = "number of bases", ylab = "Phred Score", main = "S_78_1 forward reads", outline = F, col = "blue")
+boxplot(qs6_2, xlab = "number of bases", ylab = "Phred Score", main = "S_78_2 reverse reads", outline = F, col = "red")
+```
+
+Building an index file of the B.sub genome.
+```{r}
+Rsubread::buildindex(basename="Bsub", reference="E:/Mehwish/GLDS185/Reference_file/GCF_000009045.1_ASM904v1_genomic.fna")
+```
+
+Alignment of the raw reads to the reference genome.
+```{r}
+Rsubread::align(index = "E:/Mehwish/GLDS185/Reference_file/Bsub", readfile1 = "E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_73_SL143632.fastq.gz", readfile2 = "E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_73_SL143632.fastq.gz", output_file = "E:/Mehwish/GLDS185/BAM_files/S_73.bam", type = "rna", input_format = "gzFASTQ", output_format = "BAM", nthreads = 15)
+Rsubread::align(index = "E:/Mehwish/GLDS185/Reference_file/Bsub", readfile1 = "E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_74_SL143633.fastq.gz", readfile2 = "E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_74_SL143633.fastq.gz", output_file = "E:/Mehwish/GLDS185/BAM_files/S_74.bam", type = "rna", input_format = "gzFASTQ", output_format = "BAM", nthreads = 15)
+Rsubread::align(index = "E:/Mehwish/GLDS185/Reference_file/Bsub", readfile1 = "E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_75_SL143634.fastq.gz", readfile2 = "E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_75_SL143634.fastq.gz", output_file = "E:/Mehwish/GLDS185/BAM_files/S_75.bam", type = "rna", input_format = "gzFASTQ", output_format = "BAM", nthreads = 15)
+Rsubread::align(index = "E:/Mehwish/GLDS185/Reference_file/Bsub", readfile1 = "E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_76_SL143635.fastq.gz", readfile2 = "E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_76_SL143635.fastq.gz", output_file = "E:/Mehwish/GLDS185/BAM_files/S_76.bam", type = "rna", input_format = "gzFASTQ", output_format = "BAM", nthreads = 15)
+Rsubread::align(index = "E:/Mehwish/GLDS185/Reference_file/Bsub", readfile1 = "E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_77_SL143636.fastq.gz", readfile2 = "E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_77_SL143636.fastq.gz", output_file = "E:/Mehwish/GLDS185/BAM_files/S_77.bam", type = "rna", input_format = "gzFASTQ", output_format = "BAM", nthreads = 15)
+Rsubread::align(index = "E:/Mehwish/GLDS185/Reference_file/Bsub", readfile1 = "E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_1_GSLv3-7_78_SL143637.fastq.gz", readfile2 = "E:/Mehwish/GLDS185/raw_data/GLDS-185_transcriptomics_C8E4WANXX_s1_2_GSLv3-7_78_SL143637.fastq.gz", output_file = "E:/Mehwish/GLDS185/BAM_files/S_78.bam", type = "rna", input_format = "gzFASTQ", output_format = "BAM", nthreads = 15)
+
+```
+
+
+We can get a summary of the proportion of reads that mapped to the reference genome using the propmapped function.
+```{r}
+props1 <- propmapped("E:/Mehwish/GLDS185/BAM_files/S_73.bam")
+props2 <- propmapped("E:/Mehwish/GLDS185/BAM_files/S_74.bam")
+props3 <- propmapped("E:/Mehwish/GLDS185/BAM_files/S_75.bam")
+props4 <- propmapped("E:/Mehwish/GLDS185/BAM_files/S_76.bam")
+props5 <- propmapped("E:/Mehwish/GLDS185/BAM_files/S_77.bam")
+props6 <- propmapped("E:/Mehwish/GLDS185/BAM_files/S_78.bam")
+
+```
+
+Viewing the summary of proportions.
+```{r}
+props1
+props2
+props3
+props4
+props5
+props6
+```
+
+Counting features in the BAM file.
+```{r}
+fc1 <- featureCounts("E:/Mehwish/GLDS185/BAM_files/S_73.bam", isPairedEnd = T, 
+                     annot.ext = "E:/Mehwish/GLDS185/Reference_file/GCF_000009045.1_ASM904v1_genomic.gtf", 
+                     isGTFAnnotationFile = T, GTF.featureType = "gene", GTF.attrType = "gene_id")
+fc2 <- featureCounts("E:/Mehwish/GLDS185/BAM_files/S_74.bam", isPairedEnd = T, 
+                     annot.ext = "E:/Mehwish/GLDS185/Reference_file/GCF_000009045.1_ASM904v1_genomic.gtf", 
+                     isGTFAnnotationFile = T, GTF.featureType = "gene", GTF.attrType = "gene_id")
+fc3 <- featureCounts("E:/Mehwish/GLDS185/BAM_files/S_75.bam", isPairedEnd = T, 
+                     annot.ext = "E:/Mehwish/GLDS185/Reference_file/GCF_000009045.1_ASM904v1_genomic.gtf", 
+                     isGTFAnnotationFile = T, GTF.featureType = "gene", GTF.attrType = "gene_id")
+fc4 <- featureCounts("E:/Mehwish/GLDS185/BAM_files/S_76.bam", isPairedEnd = T, 
+                     annot.ext = "E:/Mehwish/GLDS185/Reference_file/GCF_000009045.1_ASM904v1_genomic.gtf", 
+                     isGTFAnnotationFile = T, GTF.featureType = "gene", GTF.attrType = "gene_id")
+fc5 <- featureCounts("E:/Mehwish/GLDS185/BAM_files/S_77.bam", isPairedEnd = T, 
+                     annot.ext = "E:/Mehwish/GLDS185/Reference_file/GCF_000009045.1_ASM904v1_genomic.gtf", 
+                     isGTFAnnotationFile = T, GTF.featureType = "gene", GTF.attrType = "gene_id")
+fc6 <- featureCounts("E:/Mehwish/GLDS185/BAM_files/S_78.bam", isPairedEnd = T, 
+                     annot.ext = "E:/Mehwish/GLDS185/Reference_file/GCF_000009045.1_ASM904v1_genomic.gtf", 
+                     isGTFAnnotationFile = T, GTF.featureType = "gene", GTF.attrType = "gene_id")
+```
+
+
+
+Now extracting the count information from each sample and building a matrix.
+```{r}
+fc1_counts <- fc1$counts
+fc2_counts <- fc2$counts
+fc3_counts <- fc3$counts
+fc4_counts <- fc4$counts
+fc5_counts <- fc5$counts
+fc6_counts <- fc6$counts
+```
+
+Merging all counts into a single table.
+```{r}
+data <-merge(fc1_counts, fc2_counts, by = 0, all = T)
+rownames(data) <- data[,1]
+data[,1] <- NULL
+data <-merge(data, fc3_counts, by = 0, all = T)
+rownames(data) <- data[,1]
+data[,1] <- NULL
+data <-merge(data, fc4_counts, by = 0, all = T)
+rownames(data) <- data[,1]
+data[,1] <- NULL
+data <-merge(data, fc5_counts, by = 0, all = T)
+rownames(data) <- data[,1]
+data[,1] <- NULL
+data <-merge(data, fc6_counts, by = 0, all = T)
+rownames(data) <- data[,1]
+data[,1] <- NULL
+
+```
+
+Renaming the column IDs.
+```{r}
+data <- data %>% rename(c(S_73=S_73.bam, S_74=S_74.bam, S_75=S_75.bam,
+                          S_76=S_76.bam, S_77=S_77.bam, S_78=S_78.bam))
+```
+
+Exporting the raw counts table.
+```{r}
+write.csv(data, "E:/Mehwish/GLDS185/count_table_gene_region.csv", quote = F, row.names = T)
+data <- read.csv("E:/Mehwish/GLDS185/count_table_gene_region.csv", header = T, row.names = 1)
+```
+
+Conversion of counts into CPM.
+```{r}
+#data_CPM <- cpm(data)
+```
+
+Exporting the CPM table.
+```{r}
+#write.csv(data_CPM, "E:/Mehwish/GLDS185/cpm_table.csv", quote = F, row.names = T, sep = "\t")
+```
+
+Conversion of counts into RPKM.
+```{r}
+#myDGEList <- DGEList(counts = data , genes =  fc1$annotation)
+#myDGEList <- calcNormFactors(myDGEList)
+#data_RPKM <- rpkm(myDGEList)
+```
+
+Exporting the CPM table.
+```{r}
+#write.csv(data_RPKM, "E:/Mehwish/GLDS185/rpkm_table.csv", quote = F, row.names = T, sep = "\t")
+```
+
+Importing Metafile containing samples characteristics. (This file can be created from the characteristics of samples that are present as a project summary.)
+```{r}
+metaData <- read.table("E:/Mehwish/GLDS185/Meta_file/meta_file.txt", header = TRUE, stringsAsFactors=FALSE)
+metaData
+```
+
+Import the raw count file as a countData for further analysis. 
+```{r}
+countData <- data
+```
+
+
+Grouping data based on a given factor. 
+```{r}
+grouping <- factor(metaData$Condition)
+```
+
+Making a colour vector to differentiateeach sample.
+```{r}
+statusCol <- as.numeric(factor(metaData$ID)) + 1
+```
+
+Barplots of the counts for each sample.
+```{r}
+librarySizes <- colSums(countData)
+barplot(librarySizes, 
+        names=names(librarySizes), 
+        las=2, 
+        main="Barplot of library sizes", col=statusCol)
+abline(h=4e7, lty=2)
+```
+
+Logcount estimation for creating boxplots.
+```{r}
+logcounts <- log2(countData + 1)
+```
+
+Check distributions of samples using boxplots.
+```{r}
+boxplot(logcounts, xlab="", ylab="Log2(Counts)", las=2, col=statusCol)
+abline(h=median(as.matrix(logcounts)), col="blue")
+```
+
+
+Using prcomp function for calculating principle components in the samples and plotting PCA.
+```{r}
+pcDat <- prcomp(t(countData))
+autoplot(pcDat)
+autoplot(pcDat, data = metaData, colour="Condition", size=5)
+```
+
+Validation of matching data from the two different sources.
+```{r}
+all(metaData$ID %in% colnames(countData))
+```
+
+Create the design formula for the factor group.
+```{r}
+design <- as.formula(~ Condition)
+```
+
+Create a DESeqDataSet object from the countData.
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = countData, colData = metaData, design = design)
+```
+
+Filtering step (We will keep all genes where the total number of reads across all samples is greater than 5.)
+```{r}
+keep <- rowSums(counts(dds)) > 5
+dds <- dds[keep,]
+nrow(dds)
+```
+
+Distance calculation between FL (Flight) and GC (Control).
+```{r}
+vsd <- vst(dds, blind = FALSE)
+head(assay(vsd), 5)
+colData(vsd)
+```
+
+Normalization of the dds object using estimate size factor method.
+```{r}
+dds <- estimateSizeFactors(dds)
+```
+
+Calculating distanaces and building a matrix for genes across samples.
+```{r}
+sampleDists <- dist(t(assay(vsd)))
+sampleDists
+```
+
+Heatmap from distance score between 3G and 1G (Control).
+```{r}
+sampleDistMatrix <- as.matrix(sampleDists)
+rownames(sampleDistMatrix) <- paste(vsd$Condition)
+colnames(sampleDistMatrix) <- NULL
+colors <- colorRampPalette( rev(brewer.pal(9, "YlOrRd")) )(255)
+heat_map <- pheatmap(sampleDistMatrix, clustering_distance_rows = sampleDists, 
+                     clustering_distance_cols = sampleDists, col = colors)
+heat_map
+```
+
+Differential expression analysis of the dds object.
+```{r}
+dds <- DESeq(dds)
+res <- results(dds)
+res
+```
+
+Building a factor contrast for the selected study.
+```{r}
+res <- results(dds, contrast=c("Condition","FL","GC"))
+mcols(res, use.names = TRUE)
+summary(res)
+```
+
+Plotting a volcano plot of significant DEGs in the study.
+```{r}
+EnhancedVolcano(res, lab = rownames(res), x = 'log2FoldChange', y = 'padj', 
+                FCcutoff = 5, pCutoff = 0.05, legendPosition = "right", 
+                col=c('#C0C0C0', '#1E90FF', '#FFD700', '#FF6347'), 
+                legendLabels=c('Not sig.','log2FC','adj.P',
+                               'adj.P & log2FC'), border = 'full', borderWidth = 0.5, 
+                labCol = '#FF6347', selectLab = "NA", 
+                legendLabSize = 10, labSize = 0.00, xlim = c(-4,4), ylim = c(0,10), 
+                title = "FL vs GC")
+```
+
+
+Screening DEGs based on statistical significance and considering padj <0.05.
+```{r}
+res.05 <- results(dds, alpha = 0.05)
+table(res.05$padj < 0.05)
+resLFC2 <- results(dds, lfcThreshold=1)
+table(resLFC2$padj < 0.05)
+sum(res$padj < 0.05, na.rm=TRUE)
+```
+
+Screening DEGs based on statistical significance and considering L2FC >|1|.
+```{r}
+resSig_lfc2 <- subset(res, padj < 0.05 & abs(log2FoldChange) > 2)
+head(resSig[ order(resSig$log2FoldChange), ])
+head(resSig[ order(resSig$log2FoldChange, decreasing = TRUE), ])
+dim(resSig_lfc2)
+
+resSig_lfc1 <- subset(res, padj < 0.05 & abs(log2FoldChange) > 1)
+dim(resSig_lfc1)
+
+resSig_lfc3 <- subset(res, padj < 0.05 & abs(log2FoldChange) > 3)
+dim(resSig_lfc3)
+
+resSig_lfc4 <- subset(res, padj < 0.05 & abs(log2FoldChange) > 4)
+dim(resSig_lfc4)
+
+resSig_lfc5 <- subset(res, padj < 0.05 & abs(log2FoldChange) > 5)
+dim(resSig_lfc5)
+```
+
+Adjusting the parameters and using lfcshrink function to adjust LFC values in the study. 
+```{r}
+#resultsNames(dds)
+#res <- lfcShrink(dds, coef="Condition_GC_vs_FL", type="apeglm")
+#dim(res)
+```
+
+Reordering DEGs based on adjusted p-value.
+```{r}
+resOrdered <- res[order(res$padj),]
+dim(resOrdered)
+head(resOrdered)
+```
+
+Setting up cutoff for padj <0.05 and L2FC >|1|.
+```{r}
+padj.cutoff <- 0.05
+lfc.cutoff <- 1
+```
+
+Transforming of the analyzed table by considering gene symbols as row names.
+```{r}
+res_tableOE_tb <- resLFC2 %>% data.frame() %>% rownames_to_column(var="gene") %>% 
+  as_tibble()
+```
+
+Making two tables; (1) filtering based on p-value, and (2) padj.
+```{r}
+sigOE_pvalue <- res_tableOE_tb %>% dplyr::filter(pvalue < padj.cutoff & abs(log2FoldChange) > lfc.cutoff)
+sigOE_padj <- res_tableOE_tb %>% dplyr::filter(padj < padj.cutoff & abs(log2FoldChange) > lfc.cutoff)
+```
+
+Saving both filtered files based p-value and padj.
+```{r}
+write.csv(sigOE_pvalue, file = "E:/Mehwish/GLDS185/DEGs_pvalue.csv", quote = F, row.names = F)
+write.csv(sigOE_padj, file = "E:/Mehwish/GLDS185/DEGs_padj.csv", quote = F, row.names = F)
+write.csv(resSig_lfc2, file = "E:/Mehwish/GLDS185/resSig_lfc2.csv", quote = F, row.names = T)
+write.csv(resSig_lfc3, file = "E:/Mehwish/GLDS185/resSig_lfc3.csv", quote = F, row.names = T)
+write.csv(resSig_lfc1, file = "E:/Mehwish/GLDS185/resSig_lfc1.csv", quote = F, row.names = T)
+write.csv(resSig_lfc4, file = "E:/Mehwish/GLDS185/resSig_lfc4.csv", quote = F, row.names = T)
+write.csv(resSig_lfc5, file = "E:/Mehwish/GLDS185/resSig_lfc5.csv", quote = F, row.names = T)
+```
